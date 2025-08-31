@@ -99,8 +99,9 @@ opening_books:
     standard_white_tournament:
       selection: best_move
       names:
-        - DefaultBook
-        - BackupBook
+        - Perfect
+#        - DefaultBook
+#        - BackupBook
 
     standard_black_tournament:
       selection: best_move
@@ -307,3 +308,4 @@ books:                                    # Names of the opening books (to be us
   atomic: "./engines/atomic_book.bin"
   whitekingofhill: "./engines/whitekingofhill.bin"
   blackkingofhill: "./engines/blackkingofhill.bin"
+  Perfect: "./engines/Perfect2023.bin"
