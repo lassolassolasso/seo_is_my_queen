@@ -99,14 +99,16 @@ opening_books:
     standard_white_tournament:
       selection: best_move
       names:
-        - strongest
+        - loser               #book for long games    
+        - strongest           #book for draws but long
         - DefaultBook
         - BackupBook
 
     standard_black_tournament:
       selection: best_move
       names:
-        - strongest
+        - loser               #book for long games    
+        - strongest           #book for draws but long
         - BlackBook
 
 
@@ -311,3 +313,4 @@ books:                                    # Names of the opening books (to be us
   whitekingofhill: "./engines/whitekingofhill.bin"
   blackkingofhill: "./engines/blackkingofhill.bin"
   strongest: "./engines/tournament.bin"
+  loser: "./engines/main.bin"
