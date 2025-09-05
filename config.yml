@@ -90,16 +90,19 @@ opening_books:
       names:
         - Optimus2502
         - Optimus4
+        - slowdraw
 
     standard_black:
       selection: best_move
       names:
         - BlackBook
+        - slowdraw
 
     standard_white_tournament:
       selection: best_move
       names:
         - loser               #book for long games    
+        - slowdraw
         - DefaultBook
         - BackupBook
 
@@ -107,6 +110,7 @@ opening_books:
       selection: best_move
       names:
         - loser               #book for long games    
+        - slowdraw
         - DefaultBook
         - BackupBook
         - BlackBook
@@ -313,3 +317,4 @@ books:                                    # Names of the opening books (to be us
   whitekingofhill: "./engines/whitekingofhill.bin"
   blackkingofhill: "./engines/blackkingofhill.bin"
   loser: "./engines/main.bin"
+  slowdraw: "./engines/slowdraw.bin"
