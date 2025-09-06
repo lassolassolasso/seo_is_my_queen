@@ -146,7 +146,6 @@ opening_books:
         - loser               #book for long games    
         #- slowdraw            #fast draw
         - rbone
-        - rbtwo
         - DefaultBook
         - BackupBook
 
@@ -157,7 +156,6 @@ opening_books:
         - loser               #book for long games    
         #- slowdraw            #fast draw
         - rbone
-        - rbtwo
         - DefaultBook
         - BackupBook
         - BlackBook
