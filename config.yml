@@ -89,15 +89,15 @@ opening_books:
     standard_white:
       selection: weighted_random
       names:
-        - slowdraw
- #       - Optimus2502
- #       - Optimus4
+     #   - slowdraw
+        - Optimus2502
+        - Optimus4
 
     standard_black:
       selection: best_move
       names:
-        - slowdraw
-#        - BlackBook
+        #- slowdraw
+        - BlackBook
 
     standard_white_fair_bot:
         selection: best_move
