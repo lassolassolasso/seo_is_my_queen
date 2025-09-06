@@ -102,25 +102,77 @@ opening_books:
         - lila
         - lilawhite
 
+    opening_books:
+  enabled: true 
+  priority: 10000
+  books:
+    standard_white:
+      selection: weighted_random
+      names:
+        - slowdraw
+ #       - Optimus2502
+ #       - Optimus4
+
+    standard_black:
+      selection: best_move
+      names:
+        - slowdraw
+#        - BlackBook
+
+    standard_white_fair_bot:
+        selection: best_move
+        names:
+        - rbsmall
+
+    standard_black_fair_bot:
+        selection: best_move
+        names:
+        - rbsmall
+
+    standard_white_pineapplemask:
+        selection: best_move
+        names:
+        - rbsmall
+
+    standard_black_pineapplemask:
+        selection: best_move
+        names:
+        - rbsmall
+    
     standard_white_tournament:
       selection: best_move
       names:
+        #- fast
         - loser               #book for long games    
+        #- slowdraw            #fast draw
         - rbone
+        - rbtwo
         - DefaultBook
         - BackupBook
-        - lila
-        - lilawhite
 
     standard_black_tournament:
       selection: best_move
       names:
+        #- fast
         - loser               #book for long games    
+        #- slowdraw            #fast draw
         - rbone
+        - rbtwo
         - DefaultBook
         - BackupBook
         - BlackBook
 
+    chess960_white:
+      selection: best_move
+      names:
+        - c960_1
+        - c960_2
+
+    chess960_black:
+      selection: best_move
+      names:
+        - c960_1 
+        - c960_2
 
     chess960_white:
       selection: best_move
