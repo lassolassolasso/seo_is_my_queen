@@ -81,28 +81,8 @@ gaviota:
     - "/path/to/gaviota"
   max_pieces: 5                           # Count of max pieces in the local gaviota endgame tablebases.
 
+
 opening_books:
-  enabled: true 
-  priority: 10000
-  books:
-    standard_white:
-      selection: weighted_random
-      names:
-        - Optimus2502
-        - Optimus4
-        - slowdraw
-        - lila
-        - lilawhite
-
-    standard_black:
-      selection: best_move
-      names:
-        - BlackBook
-        - slowdraw
-        - lila
-        - lilawhite
-
-    opening_books:
   enabled: true 
   priority: 10000
   books:
@@ -122,22 +102,22 @@ opening_books:
     standard_white_fair_bot:
         selection: best_move
         names:
-        - rbsmall
+        - fast
 
     standard_black_fair_bot:
         selection: best_move
         names:
-        - rbsmall
+        - fast
 
     standard_white_pineapplemask:
         selection: best_move
         names:
-        - rbsmall
+        - fast
 
     standard_black_pineapplemask:
         selection: best_move
         names:
-        - rbsmall
+        - fast
     
     standard_white_tournament:
       selection: best_move
@@ -378,5 +358,6 @@ books:                                    # Names of the opening books (to be us
   lila: "./engines/lila.bin"
   lilawhite: "./engines/lilawhite.bin"
   rbsmall: "./engines/rbsmall.bin"
+  fast: "./engines/fast.bin"
 
   
