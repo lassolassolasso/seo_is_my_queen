@@ -1,5 +1,3 @@
-
-
 token:         # Lichess OAuth2 Token.
 
 engines:
@@ -99,25 +97,25 @@ opening_books:
         #- slowdraw
         - BlackBook
 
-    standard_white_fair_bot:
+    PINEAPPLEMASK_blitz:
         selection: best_move
         names:
-        - fast
+        - rbsmall
 
-    standard_black_fair_bot:
+    PINEAPPLEMASK_bullet:
         selection: best_move
         names:
-        - fast
+        - rbsmall
 
-    standard_white_pineapplemask:
+    Fair_Bot_bullet:
         selection: best_move
         names:
-        - fast
+        - rbsmall
 
-    standard_black_pineapplemask:
+    Fair_Bot_blitz:
         selection: best_move
         names:
-        - fast
+        - rbsmall
     
     standard_white_tournament:
       selection: best_move
