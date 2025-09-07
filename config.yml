@@ -170,16 +170,6 @@ opening_books:
       names:
         - Anti
 
-    crazyhouse_white:
-      selection: best_move
-      names:
-        - crazy
-
-    crazyhouse_black:
-      selection: best_move
-      names:
-        - crazy
-
     horde_white:
       selection: best_move
       names:
