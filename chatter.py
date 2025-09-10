@@ -1,9 +1,8 @@
 import os
 import platform
 from collections import defaultdict
-import random
+
 import psutil
-import asyncio
 
 from api import API
 from botli_dataclasses import Chat_Message, Game_Information
@@ -23,6 +22,7 @@ class Chatter:
         self.username = username
         self.game_info = game_information
         self.lichess_game = lichess_game
+        self.opponent_username = self.game_info.black_name if lichess_game.is_white else self.game_info.white_name
         self.cpu_message = self._get_cpu()
         self.draw_message = self._get_draw_message(config)
         self.name_message = self._get_name_message(config.version)
@@ -33,7 +33,7 @@ class Chatter:
         self.spectator_goodbye = self._format_message(config.messages.goodbye_spectators)
         self.print_eval_rooms: set[str] = set()
 
-    async def handle_chat_message(self, chatLine_Event: dict) -> None:
+    async def handle_chat_message(self, chatLine_Event: dict, takeback_count: int, max_takebacks: int) -> None:
         chat_message = Chat_Message.from_chatLine_event(chatLine_Event)
 
         if chat_message.username == 'lichess':
@@ -50,7 +50,7 @@ class Chatter:
             print(output)
 
         if chat_message.text.startswith('!'):
-            await self._handle_command(chat_message)
+            await self._handle_command(chat_message, takeback_count, max_takebacks)
 
     async def print_eval(self) -> None:
         if not self.game_info.increment_ms and self.lichess_game.own_time < 30.0:
@@ -76,7 +76,12 @@ class Chatter:
         if self.spectator_goodbye:
             await self.api.send_chat_message(self.game_info.id_, 'spectator', self.spectator_goodbye)
 
-    async def _handle_command(self, chat_message: Chat_Message) -> None:
+    async def send_abortion_message(self) -> None:
+        await self.api.send_chat_message(self.game_info.id_, 'player', ('Too bad you weren\'t there. '
+                                                                        'Feel free to challenge me again, '
+                                                                        'I will accept the challenge if possible.'))
+
+    async def _handle_command(self, chat_message: Chat_Message, takeback_count: int, max_takebacks: int) -> None:
         match chat_message.text[1:].lower():
             case 'cpu':
                 await self.api.send_chat_message(self.game_info.id_, chat_message.room, self.cpu_message)
@@ -89,13 +94,19 @@ class Chatter:
             case 'name':
                 await self.api.send_chat_message(self.game_info.id_, chat_message.room, self.name_message)
             case 'ping':
-                await self._handle_ping_command(chat_message)
+                if not self.game_info.increment_ms and self.lichess_game.own_time < 10.0:
+                    return
+
+                ping = await self.api.ping() * 1000.0
+                await self.api.send_chat_message(self.game_info.id_, chat_message.room, f'Ping: {ping:.1f} ms')
             case 'printeval':
                 if not self.game_info.increment_ms and self.game_info.initial_time_ms < 180_000:
                     await self._send_last_message(chat_message.room)
                     return
+
                 if chat_message.room in self.print_eval_rooms:
                     return
+
                 self.print_eval_rooms.add(chat_message.room)
                 await self.api.send_chat_message(self.game_info.id_,
                                                  chat_message.room,
@@ -106,54 +117,42 @@ class Chatter:
             case 'pv':
                 if chat_message.room == 'player':
                     return
+
                 if not (message := self._append_pv()):
-                    message = 'No modules available.'
+                    message = 'No PV available.'
+
                 await self.api.send_chat_message(self.game_info.id_, chat_message.room, message)
             case 'ram':
                 await self.api.send_chat_message(self.game_info.id_, chat_message.room, self.ram_message)
-            case 'roast':
-                roast = self._get_random_roast()
-                await self.api.send_chat_message(self.game_info.id_, chat_message.room, roast)
-            case 'destroy' | 'troll':
-                destroy = self._get_random_destroy()
-                await self.api.send_chat_message(self.game_info.id_, chat_message.room, destroy)
-            case 'quotes':
-                quote = self._get_random_quote()
-                await self.api.send_chat_message(self.game_info.id_, chat_message.room, quote)
+            case 'takeback':
+                await self._send_takeback_message(chat_message.room, takeback_count, max_takebacks)
             case 'help' | 'commands':
                 if chat_message.room == 'player':
-                    message = 'Supported commands: !cpu, !draw, !eval, !motor, !name, !printeval, !ram, !ping, !roast, !destroy, !quotes'
+                    message = ('Supported commands: !cpu, !draw, !eval, !motor, '
+                               '!name, !ping, !printeval, !ram, !takeback')
                 else:
-                    message = 'Supported commands: !cpu, !draw, !eval, !motor, !name, !printeval, !pv, !ram, !ping, !roast, !destroy, !quotes'
+                    message = ('Supported commands: !cpu, !draw, !eval, !motor, '
+                               '!name, !ping, !printeval, !pv, !ram, !takeback')
+
                 await self.api.send_chat_message(self.game_info.id_, chat_message.room, message)
 
     async def _send_last_message(self, room: str) -> None:
         last_message = self.lichess_game.last_message.replace('Engine', 'Evaluation')
         last_message = ' '.join(last_message.split())
+
         if room == 'spectator':
             last_message = self._append_pv(last_message)
+
         await self.api.send_chat_message(self.game_info.id_, room, last_message)
 
-    async def _handle_ping_command(self, chat_message: Chat_Message) -> None:
-        ping_ms = await self._get_ping("lichess.org")
-        await self.api.send_chat_message(self.game_info.id_, chat_message.room, f"Ping: {ping_ms}")
+    async def _send_takeback_message(self, room: str, takeback_count: int, max_takebacks: int) -> None:
+        if not max_takebacks:
+            message = f'{self.username} does not accept takebacks.'
+        else:
+            message = (f'{self.username} accepts up to {max_takebacks} takeback(s). '
+                       f'{self.opponent_username} used {takeback_count} so far.')
 
-    async def _get_ping(self, host: str) -> str:
-        try:
-            count_flag = "-n" if platform.system().lower().startswith("win") else "-c"
-            proc = await asyncio.create_subprocess_exec(
-                "ping", count_flag, "1", host,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            stdout, _ = await proc.communicate()
-            output = stdout.decode()
-            for line in output.splitlines():
-                if "time=" in line.lower():
-                    return line.split("time=")[1].split()[0]
-            return "unknown"
-        except Exception as e:
-            return f"error: {e}"
+        await self.api.send_chat_message(self.game_info.id_, room, message)
 
     def _get_cpu(self) -> str:
         cpu = ''
@@ -162,37 +161,51 @@ class Chatter:
                 while line := cpuinfo.readline():
                     if line.startswith('model name'):
                         cpu = line.split(': ')[1]
-                        cpu = cpu.replace('(R)', '').replace('(TM)', '')
+                        cpu = cpu.replace('(R)', '')
+                        cpu = cpu.replace('(TM)', '')
+
                         if len(cpu.split()) > 1:
                             return cpu
+
         if processor := platform.processor():
-            cpu = processor.split()[0].replace('GenuineIntel', 'Intel')
+            cpu = processor.split()[0]
+            cpu = cpu.replace('GenuineIntel', 'Intel')
+
         cores = psutil.cpu_count(logical=False)
         threads = psutil.cpu_count(logical=True)
         cpu_freq = psutil.cpu_freq().max / 1000
+
         return f'{cpu} {cores}c/{threads}t @ {cpu_freq:.2f}GHz'
 
     def _get_ram(self) -> str:
         mem_bytes = psutil.virtual_memory().total
         mem_gib = mem_bytes / (1024.**3)
+
         return f'{mem_gib:.1f} GiB'
 
     def _get_draw_message(self, config: Config) -> str:
-        if not config.offer_draw.enabled:
-            return 'I will neither accept nor offer draws.'
+        too_low_rating = (config.offer_draw.min_rating is not None and
+                          self.lichess_game.engine.opponent.rating is not None and
+                          self.lichess_game.engine.opponent.rating < config.offer_draw.min_rating)
+        no_draw_against_humans = (not self.lichess_game.engine.opponent.is_engine and
+                                  not config.offer_draw.against_humans)
+        if not config.offer_draw.enabled or too_low_rating or no_draw_against_humans:
+            return f'{self.username} will neither accept nor offer draws.'
+
         max_score = config.offer_draw.score / 100
-        return (f'I will accept/offer draws after move {config.offer_draw.min_game_length} '
+
+        return (f'{self.username} offers draw at move {config.offer_draw.min_game_length} or later '
                 f'if the eval is within +{max_score:.2f} to -{max_score:.2f} for the last '
                 f'{config.offer_draw.consecutive_moves} moves.')
 
     def _get_name_message(self, version: str) -> str:
-        return f'I am NNUE_Drift, and I use {self.lichess_game.engine.name} (BotLi {version})'
+        return (f'{self.username} running {self.lichess_game.engine.name} (BotLi {version})')
 
     def _format_message(self, message: str | None) -> str | None:
         if not message:
             return
-        opponent_username = self.game_info.black_name if self.lichess_game.is_white else self.game_info.white_name
-        mapping = defaultdict(str, {'opponent': opponent_username, 'me': self.username,
+
+        mapping = defaultdict(str, {'opponent': self.opponent_username, 'me': self.username,
                                     'engine': self.lichess_game.engine.name, 'cpu': self.cpu_message,
                                     'ram': self.ram_message})
         return message.format_map(mapping)
@@ -200,17 +213,21 @@ class Chatter:
     def _append_pv(self, initial_message: str = '') -> str:
         if len(self.lichess_game.last_pv) < 2:
             return initial_message
+
         if initial_message:
             initial_message += ' '
+
         if self.lichess_game.is_our_turn:
             board = self.lichess_game.board.copy(stack=1)
             board.pop()
         else:
             board = self.lichess_game.board.copy(stack=False)
+
         if board.turn:
             initial_message += 'PV:'
         else:
             initial_message += f'PV: {board.fullmove_number}...'
+
         final_message = initial_message
         for move in self.lichess_game.last_pv[1:]:
             if board.turn:
@@ -220,41 +237,5 @@ class Chatter:
                 break
             board.push(move)
             final_message = initial_message
+
         return final_message
-
-    def _get_random_roast(self) -> str:
-        roasts = [
-            "You play like your pieces are allergic to the center.",
-            "Your strategy is so deep, it hasn't surfaced yet.",
-            "I’ve seen pawns with more ambition than your whole army.",
-            "You're like a blunder wrapped in an inaccuracy.",
-            "Even Stockfish ran out of evals trying to explain your moves.",
-            "You treat the king like a tourist — always wandering.",
-            "You play like your mouse is on strike.",
-        ]
-        return random.choice(roasts)
-
-    def _get_random_destroy(self) -> str:
-        destroys = [
-            "I’m not just winning — I’m rewriting your opening book in real time.",
-            "This isn’t a game anymore. It’s a live demo of how to dismantle a player.",
-            "You're not losing, you're being systematically erased.",
-            "Your board is starting to look like a clearance sale — everything must go!",
-            "If this were a movie, you'd already be rolling the credits.",
-            "You brought a pawn to a queen fight.",
-            "This isn't just checkmate — it's checkmate with style.",
-        ]
-        return random.choice(destroys)
-
-    def _get_random_quote(self) -> str:
-        quotes = [
-            "“In life, as in chess, forethought wins.” – Charles Buxton",
-            "“Even a poor plan is better than no plan at all.” – Mikhail Chigorin",
-            "“Every master was once a beginner.”",
-            "“Play the opening like a book, the middlegame like a magician, and the endgame like a machine.” – Rudolf Spielmann",
-            "“The blunders are all there on the board, waiting to be made.” – Savielly Tartakower",
-            "“You must take your opponent into a deep dark forest where 2+2=5, and the path leading out is only wide enough for one.” – Tal",
-            "“Great moves often come from great pain.”",
-            "“The beauty of a move lies not in its appearance but in the thought behind it.” – Aaron Nimzowitsch",
-        ]
-        return random.choice(quotes)
