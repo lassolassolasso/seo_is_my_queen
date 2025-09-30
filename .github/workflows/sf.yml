@@ -15,8 +15,8 @@ jobs:
         run: |
           mkdir -p engines
           sudo apt-get update && sudo apt-get install -y unzip
-          curl -L -o stockfish.zip https://github.com/official-stockfish/Stockfish/releases/download/stockfish-dev-20250928-3073d82c/stockfish-ubuntu-x86-64-bmi2.tar
-          mv engines/stockfish-ubuntu-x86-64-bmi2 engines/stockfish-ubuntu-x86-64-bmi2
+          curl -L -o stockfish-ubuntu-x86-64-bmi2.tar https://github.com/official-stockfish/Stockfish/releases/download/stockfish-dev-20250928-3073d82c/stockfish-ubuntu-x86-64-bmi2.tar
+          mv stockfish-ubuntu-x86-64-bmi2/stockfish/stockfish-ubuntu-x86-64-bmi2 engines/stockfish-ubuntu-x86-64-bmi2
       - name: Commit and push
         run: |
           git config --global user.name "github-actions[bot]"
